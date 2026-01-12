@@ -1,4 +1,5 @@
 {
-  "buildCommand": "npm install --include=dev && npx vite build",
+  "framework": null,
+  "buildCommand": "npm install && npm run build",
   "outputDirectory": "dist"
 }
