@@ -84,6 +84,7 @@ export default function App() {
   const [currentOnline, setCurrentOnline] = useState<number | null>(null);
   const [lastUpdate, setLastUpdate] = useState<string>('--:--:--');
   const [status, setStatus] = useState<string>('Iniciando...');
+  const [lastSummaryDate, setLastSummaryDate] = useState<string | null>(null);
   const [windowSize, setWindowSize] = useState(() => ({
     width: typeof window !== 'undefined' ? window.innerWidth : 1024,
     height: typeof window !== 'undefined' ? window.innerHeight : 768
@@ -194,6 +195,48 @@ export default function App() {
       return () => clearInterval(interval);
     }
   }, [user]);
+
+  // 4. Efeito para Resumo Diário
+  useEffect(() => {
+    const saveDailyAverage = async (date: Date) => {
+      if (history.length === 0) return;
+
+      const totalUsers = history.reduce((sum, entry) => sum + entry.count, 0);
+      const dailyAverage = Math.round(totalUsers / history.length);
+      const dateId = date.toISOString().slice(0, 10); // YYYY-MM-DD
+
+      try {
+        const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'daily_averages', dateId);
+        await setDoc(docRef, {
+          averageUsers: dailyAverage,
+          timestamp: date.toISOString(),
+          entryCount: history.length
+        });
+        console.log(`Média diária de ${dateId} salva: ${dailyAverage}`);
+        setHistory([]); // Limpa o histórico para o novo dia
+      } catch (error) {
+        console.error("Erro ao salvar média diária:", error);
+      }
+    };
+
+    const midnightCheck = setInterval(() => {
+      const now = new Date();
+      const todayStr = now.toISOString().slice(0, 10);
+
+      if (lastSummaryDate !== todayStr) {
+        const yesterday = new Date(now);
+        yesterday.setDate(now.getDate() - 1);
+        
+        if (history.length > 0) {
+            saveDailyAverage(yesterday);
+        }
+        
+        setLastSummaryDate(todayStr);
+      }
+    }, 60000); // Roda a cada minuto
+
+    return () => clearInterval(midnightCheck);
+  }, [history, lastSummaryDate, user]);
 
   // Configuração do Gráfico
   const chartOptions = useMemo<ChartOptions<'line'>>(() => ({
