@@ -5,7 +5,10 @@ import {
   doc, 
   setDoc, 
   collection, 
-  onSnapshot
+  onSnapshot,
+  type QuerySnapshot,
+  type QueryDocumentSnapshot,
+  type DocumentData
 } from 'firebase/firestore';
 import { 
   getAuth, 
@@ -51,8 +54,17 @@ interface HabboApiResponse {
   onlineUsers: number;
 }
 
+// Tipos adicionais para propriedades globais injetadas no window
+declare global {
+  interface Window {
+    __firebase_config?: Record<string, unknown>;
+    __app_id?: string;
+    __initial_auth_token?: string;
+  }
+}
+
 // --- Configurações Firebase ---
-const firebaseConfig = (window as any).__firebase_config || {
+const firebaseConfig = window.__firebase_config || {
   apiKey: "demo-api-key",
   authDomain: "demo-project.firebaseapp.com",
   databaseURL: "https://demo-project-default-rtdb.firebaseio.com",
@@ -61,7 +73,7 @@ const firebaseConfig = (window as any).__firebase_config || {
   messagingSenderId: "123456789",
   appId: "1:123456789:web:abcdef123456"
 };
-const appId = (window as any).__app_id || 'habbo-origins-monitor';
+const appId = window.__app_id || 'habbo-origins-monitor';
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
@@ -77,7 +89,7 @@ export default function App() {
   useEffect(() => {
     const initAuth = async () => {
       try {
-        const token = (window as any).__initial_auth_token;
+        const token = window.__initial_auth_token;
         if (token) {
           // signInWithCustomToken omitido aqui por brevidade, usando anônimo como padrão estável
           await signInAnonymously(auth);
@@ -101,9 +113,9 @@ export default function App() {
 
     const historyCol = collection(db, 'artifacts', appId, 'public', 'data', 'online_history');
     
-    const unsubscribe = onSnapshot(historyCol, (snapshot: any) => {
+    const unsubscribe = onSnapshot(historyCol, (snapshot: QuerySnapshot<DocumentData>) => {
       const data: OnlineData[] = [];
-      snapshot.forEach((doc: any) => {
+      snapshot.forEach((doc: QueryDocumentSnapshot<DocumentData>) => {
         data.push(doc.data() as OnlineData);
       });
 
@@ -115,7 +127,7 @@ export default function App() {
       // Limitar a exibição aos últimos 100 pontos para performance
       setHistory(sortedData.slice(-100));
       setStatus("Sincronizado");
-    }, (error: any) => {
+    }, (error: unknown) => {
       console.error("Erro Firestore:", error);
       setStatus("Erro ao ler histórico.");
     });
@@ -148,7 +160,7 @@ export default function App() {
           label: now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
         });
       }
-    } catch (err) {
+    } catch (err: unknown) {
       console.error("Erro fetch:", err);
       console.error("URL tentada:", apiURL);
       setStatus("Erro ao buscar dados da API.");
