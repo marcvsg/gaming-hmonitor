@@ -1,5 +1,4 @@
 {
-  "root": "monitor-onlines",
-  "buildCommand": "npm run build",
-  "outputDirectory": "dist"
+  "buildCommand": "cd monitor-onlines && npm run build",
+  "outputDirectory": "monitor-onlines/dist"
 }
