@@ -1,0 +1,4 @@
+{
+  "buildCommand": "cd monitor-onlines && npm install && npm run build",
+  "outputDirectory": "monitor-onlines/dist"
+}
