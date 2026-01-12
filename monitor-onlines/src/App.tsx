@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { initializeApp } from 'firebase/app';
 import { 
   getFirestore, 
@@ -84,6 +84,26 @@ export default function App() {
   const [currentOnline, setCurrentOnline] = useState<number | null>(null);
   const [lastUpdate, setLastUpdate] = useState<string>('--:--:--');
   const [status, setStatus] = useState<string>('Iniciando...');
+  const [windowSize, setWindowSize] = useState(() => ({
+    width: typeof window !== 'undefined' ? window.innerWidth : 1024,
+    height: typeof window !== 'undefined' ? window.innerHeight : 768
+  }));
+
+  // Detect window size changes
+  useEffect(() => {
+    const handleResize = () => {
+      setWindowSize({
+        width: window.innerWidth,
+        height: window.innerHeight
+      });
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  const isMobile = windowSize.width < 640;
+  const isTablet = windowSize.width >= 640 && windowSize.width < 768;
 
   // 1. Efeito de Autenticação (Regra 3)
   useEffect(() => {
@@ -176,23 +196,7 @@ export default function App() {
   }, [user]);
 
   // Configuração do Gráfico
-  const chartData = {
-    labels: history.map(h => h.label),
-    datasets: [
-      {
-        fill: true,
-        label: 'Usuários Online',
-        data: history.map(h => h.count),
-        borderColor: '#ffffffff',
-        backgroundColor: 'rgba(16, 185, 129, 0.1)',
-        tension: 0.4,
-        pointRadius: 3,
-        pointBackgroundColor: '#10b981',
-      },
-    ],
-  };
-
-  const chartOptions: ChartOptions<'line'> = {
+  const chartOptions = useMemo<ChartOptions<'line'>>(() => ({
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
@@ -205,19 +209,56 @@ export default function App() {
         bodyColor: '#f8fafc',
         borderColor: '#334155',
         borderWidth: 1,
+        titleFont: { size: isMobile ? 11 : 12 },
+        bodyFont: { size: isMobile ? 10 : 11 },
+        padding: isMobile ? 6 : 8,
+        displayColors: false,
       }
     },
     scales: {
       x: {
         grid: { display: false },
-        ticks: { color: '#64748b', maxTicksLimit: 8 }
+        ticks: { 
+          color: '#64748b', 
+          maxTicksLimit: isMobile ? 4 : isTablet ? 6 : 8,
+          font: { size: isMobile ? 9 : 11 }
+        }
       },
       y: {
         grid: { color: 'rgba(255, 255, 255, 0.05)' },
-        ticks: { color: '#64748b' },
+        ticks: { 
+          color: '#64748b',
+          font: { size: isMobile ? 9 : 11 }
+        },
         beginAtZero: true
       }
+    },
+    interaction: {
+      intersect: false,
+      mode: 'index',
+    },
+    elements: {
+      point: {
+        radius: isMobile ? 1.5 : 3,
+        hoverRadius: isMobile ? 3 : 5
+      }
     }
+  }), [isMobile, isTablet]);
+
+  const chartData = {
+    labels: history.map(h => h.label),
+    datasets: [
+      {
+        fill: true,
+        label: 'Usuários Online',
+        data: history.map(h => h.count),
+        borderColor: '#ffffffff',
+        backgroundColor: 'rgba(16, 185, 129, 0.1)',
+        tension: 0.4,
+        pointRadius: isMobile ? 1.5 : 3,
+        pointBackgroundColor: '#10b981',
+      },
+    ],
   };
 
   return (
@@ -226,10 +267,10 @@ export default function App() {
       <header className="header">
         <div>
           <div className="header-title">
-            <h1>Habbo Origins <span className="badge">TS</span></h1>
+            <h1>Origins<span className="badge">Monitor</span></h1>
           </div>
           <p className="header-subtitle">
-            <Activity className="icon-sm" /> Monitoramento Analítico de Usuários
+            <Activity className="icon-sm" /> Monitoramento Analitico de Usuários
           </p>
         </div>
 
